@@ -389,7 +389,7 @@ namespace iLabs.ServiceBroker.iLabSB
             LabClient[] clients = AdministrativeAPI.GetLabClients(labIds);
             if (clients.Length > 0)
             {
-                if (clients[0].clientType == LabClient.INTERACTIVE_HTML_REDIRECT)
+                if (clients[0].clientType == LabClient.INTERACTIVE_HTML_REDIRECT || clients[0].clientType == LabClient.INTERACTIVE_APPLET)
                 {
                     // [GeneralTicketing] get lab servers metadata from lab server ids
                     ProcessAgentInfo[] labServers = issuer.GetProcessAgentInfos(clients[0].labServerIDs);
@@ -412,29 +412,62 @@ namespace iLabs.ServiceBroker.iLabSB
                                 duration = Convert.ToInt64(Session["Duration"]);
                             }
 
-                            redirectURL = executor.ExecuteExperimentExecutionRecipe(labServers[0], clients[0],
-                            start, duration, Convert.ToInt32(Session["UserTZ"]), Convert.ToInt32(Session["UserID"]),
-                            Convert.ToInt32(Session["GroupID"]), (string)Session["GroupName"]);
+                            // in my mind here is where things should be treaded differently.. 
+                            if (clients[0].clientType == LabClient.INTERACTIVE_HTML_REDIRECT)
+                            {
+                                redirectURL = executor.ExecuteExperimentExecutionRecipe(labServers[0], clients[0],
+                                start, duration, Convert.ToInt32(Session["UserTZ"]), Convert.ToInt32(Session["UserID"]),
+                                Convert.ToInt32(Session["GroupID"]), (string)Session["GroupName"]);
 
-                            // Add the return url to the redirect
-                            redirectURL += "&sb_url=" + Utilities.ExportUrlPath(Request.Url);
+                                // Add the return url to the redirect
+                                redirectURL += "&sb_url=" + Utilities.ExportUrlPath(Request.Url);
 
-                            // Now open the lab within the current Window/frame
-                            Response.Redirect(redirectURL, true);
+                                // Now open the lab within the current Window/frame
+                                Response.Redirect(redirectURL, true);
+                            }
+                            else if (clients[0].clientType == LabClient.INTERACTIVE_APPLET)
+                            {
+                                // Note: Currently not supporting Interactive applets
+                                // use the Loader script for Batch experiments
+                                //
+
+                                // this is quite annoying, why isn't there any support for this, I would imagine this would be
+                                // one of the most popular features.....
+
+                                // we need some way to get the pass the couponId,passkey, issuerGuid and sbUrl to the applet
+                                // the only way to send arguments to the applet is to pass them as parameters in the 
+                                // "creating" html code.
+
+                                //  couponId = Request.QueryString["coupon_id"];
+                                //  passkey = Request.QueryString["passkey"];
+                                //  issuerGuid = Request.QueryString["issuer_guid"];
+                                //  sbUrl = Request.QueryString["sb_url"];
+
+                                // my idea is then to allow users to specify what parameters they want to pass to the applets 
+                                // as %variable% so %passkey% would get the passkey and add it as a parameter.
+                                // note: this may not be the most secure way to do it but it should work, and at least 
+                                // work as an example for what one can do further. 
+
+                                // it is my suggestion to just use the functionality that the HTML redirect client is using to 
+                                // create the extension that will allow us to use interactive applets. 
+                                //  if we look at the html redirect code we see that it uses a RecipeExecutor to setup tickets
+                                // etc
+                                // this is now modified to easier allow extraction of the wanted information
+                                IDictionary<string,string> ht = executor.ExecuteExperimentExecutionRecipe(labServers[0], clients[0],
+                                        start, duration, Convert.ToInt32(Session["UserTZ"]), Convert.ToInt32(Session["UserID"]),
+                                        Convert.ToInt32(Session["GroupID"]), (string)Session["GroupName"],false);
+
+                                // process loader script <applet .... > and replace %var% with values from hashtable.
+                               
+                                Session["LoaderScript"] =  LoaderScriptSupport.process(ref clients[0].loaderScript, ht);//clients[0].loaderScript;
+                                Session.Remove("RedirectURL");
+
+                                string jScript = @"<script language='javascript'>parent.theapplet.location.href = '"
+                                    + "applet.aspx" + @"'</script>";
+                                Page.RegisterStartupScript("ReloadFrame", jScript);
+                            }
                         }
                     }
-                }
-                else if (clients[0].clientType == LabClient.INTERACTIVE_APPLET)
-                {
-                    // Note: Currently not supporting Interactive applets
-                    // use the Loader script for Batch experiments
-
-                    Session["LoaderScript"] = clients[0].loaderScript;
-                    Session.Remove("RedirectURL");
-
-                    string jScript = @"<script language='javascript'>parent.theapplet.location.href = '"
-                        + "applet.aspx" + @"'</script>";
-                    Page.RegisterStartupScript("ReloadFrame", jScript);
                 }
 
                 // Support for Batch 6.1 Lab Clients
