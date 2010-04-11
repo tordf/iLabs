@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0056)~/ssoAuth_test.html -->
+<HTML><HEAD>
+<META http-equiv=Content-Type content="text/html; charset=windows-1252">
+<META content="MSHTML 6.00.6000.16981" name=GENERATOR></HEAD><HEADER></HEADER>
+<BODY>
+<H1>Test Page for SSOAUTH </H1>
+<p>This is currently configured to use groups and clients defined on a test machine you will have to replace the client guids and group names 
+with values for yor site. This file should not be publihed, but is supplied as examples of how to use the work around Single Sign On page (ssoAuth.aspx),
+<b>ssoAuth.asmx must never be called directly</b>. </p>
+
+<UL>
+  <LI>user trumps 
+  <LI>client trumps group 
+  <LI>Users: test, test2, test3, web 
+  <LI>Groups: Experiment_GRoup, Test_Group, weblab_group, html_group 
+  <LI>clients: 
+  <LI>TimeOfDAy DB39A2645617443DAD407EAAD9A4BF3B 
+  <LI>TOD2 37DB00BE8A414637ADC61EBBCA9D5D18 
+  <LI>weblab 82939D5C944411292A4AEBDE73A381E 
+  <LI>html test 5F0375DF40B04453B2F92E7B3D280EB7 
+  <LI>WebLabElvis on Aruyn D7DCC0B6-AEA4-420F-A7D7-8AACE039AB54 
+  <LI>Test is in Experiment_Group 
+  <LI>web is in weblab_group 
+  <LI>Test2 is in Experiment_Group, Test_Group 
+  <LI>Test3 is in Experiment_GRoup, Test_Group-admin 
+  <LI>URL: ~/ssoAuth.aspx </LI></UL>
+<P>No information supplied: should ask user to login and follow normal 
+paths</P><A 
+href="~/default.aspx?sso=t">Generic 
+Link</A> <BR>
+<P>Only username information: should ask user to login and follow normal 
+paths</P><A 
+href="~/default.aspx?sso=t&amp;usr=test">Username 
+only - one group membership</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=test2">Username 
+only - member of 2 groups</A> <BR>
+<P>User and client information: should ask user to login and if the client is 
+found in only 1 group then select that group otherwise ask</P><A 
+href="~/default.aspx?sso=t&amp;usr=test&amp;cid=DB39A2645617443DAD407EAAD9A4BF3B">Username 
+and client GUID #1 - member of 1 group</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=test2&amp;cid=DB39A2645617443DAD407EAAD9A4BF3B">Username 
+and client GUID #1 - member of 2 groups</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=test&amp;cid=37DB00BE8A414637ADC61EBBCA9D5D18">Username 
+and client GUID #2 - member of 1 groups client not in users group</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=test2&amp;cid=37DB00BE8A414637ADC61EBBCA9D5D18">Username 
+and client GUID #2 - member of 2 groups</A> <BR>
+<P>User, group and client information</P><A 
+href="~/default.aspx?sso=t&amp;usr=test2&amp;cid=DB39A2645617443DAD407EAAD9A4BF3B&amp;grp=Experiment_Group">Username, 
+client GUID #1, grp Exp - member of 2 groups</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=test2&amp;cid=37DB00BE8A414637ADC61EBBCA9D5D18&amp;grp=Experiment_Group">Username, 
+client GUID #2, grp Exp - member of 2 groups</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=test&amp;cid=37DB00BE8A414637ADC61EBBCA9D5D18&amp;grp=Test_Group">Username, 
+client GUID #2, grp Test - member of other group</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=web&amp;cid=82939D5C944411292A4AEBDE73A381E&amp;grp=weblab_group">Username, 
+client GUID weblab, grp weblab</A> <BR><A 
+href="~/default.aspx?sso=t&amp;usr=kirky&amp;cid=5F0375DF40B04453B2F92E7B3D280EB7&amp;grp=html_group">Username, 
+client GUID html, grp html</A> <BR>
+<P>group and client information</P><A 
+href="~/default.aspx?sso=t&amp;cid=5F0375DF40B04453B2F92E7B3D280EB7&amp;grp=html_group">client 
+GUID html, grp html</A> <BR><A 
+href="~/default.aspx?sso=t&amp;cid=DB39A2645617443DAD407EAAD9A4BF3B&amp;grp=Experiment_Group">client 
+GUID #1, grp Exp </A><BR><A 
+href="~/default.aspx?sso=t&amp;cid=5F0375DF40B04453B2F92E7B3D280EB7&amp;grp=web_group">client 
+GUID html, grp web- client not in specified group</A> <BR>
+<P>Group only </P><A 
+href="~/default.aspx?sso=t&amp;grp=Experiment_Group">grp 
+Exp </A><BR><A 
+href="~/default.aspx?sso=t&amp;grp=html_group">grp 
+html</A> <BR>
+<P><B>Warning: You can not run the batch Applet while on KUDEV, Java is not 
+installed on the machine</B></P>
+<P>Batch WebLabElvis on Ayurn, it is not configured correctly so you can connect 
+but do not have the required permissions. You are still able send commands and 
+recieve error messages from the batch LS.</P>The client is only in 
+experiment_group <BR>Batch: Client only, <A 
+href="~/default.aspx?sso=t&amp;cid=D7DCC0B6-AEA4-420F-A7D7-8AACE039AB54">WebLabElvis</A> 
+<BR>Batch: Group &amp; Client it <A 
+href="~/default.aspx?sso=t&amp;cid=D7DCC0B6-AEA4-420F-A7D7-8AACE039AB54&amp;grp=experiment_group">WebLabElvis</A> 
+<BR><BR><A href="~/ssoAuth.aspx">Generic 
+Link</A> <BR></BODY></HTML>

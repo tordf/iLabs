@@ -1,0 +1,34 @@
+
+
+TABLE.scheduling {  border:none;   padding: 0px 0px 0px 0px; text-align: left;  
+	 font-family:Tahoma; font-size: 10px; vertical-align:top
+	 }
+	 
+	 
+TABLE.day { border:none; border-right: solid 1px black; vertical-align: top;  display:block;  cursor:default; 
+	
+	}
+
+TABLE.day TD {  vertical-align: top; text-align: left; display:block
+	}
+	
+TABLE.day TH { padding:inherit; 
+	background-color: #ECE9D8; text-align:center; display:block
+	}
+
+TABLE.day TH DIV {border: none; padding: 0px 0px 0px 0px 
+	}
+	 
+TABLE.hours { border:none; border-right: solid 1px black; border-left: solid 1px black; 
+	text-align: right; vertical-align: bottom;  display:block;  cursor:default; 
+	font-family:Tahoma; font-size: 14px
+	}
+	
+TABLE.hours TD {display:block
+	}
+	
+TABLE.hours TH { display:block;  background-color: #ECE9D8
+	}
+
+TABLE.hours TH DIV {border: none; padding: 0px 0px 0px 0px
+	}
