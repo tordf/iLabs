@@ -25,6 +25,7 @@ using iLabs.DataTypes.StorageTypes;
 using iLabs.DataTypes.TicketingTypes;
 using iLabs.DataTypes.SoapHeaderTypes;
 using iLabs.Ticketing;
+using System.Collections.Generic;
 
 
 
@@ -67,7 +68,56 @@ namespace iLabs.ServiceBroker
         public string ExecuteExperimentExecutionRecipe(ProcessAgentInfo labServer, LabClient client,
             DateTime startExecution, long duration, int userTZ, int userID, int groupID, string groupName)
         {
-            
+
+            BrokerDB brokerDB;
+            Coupon coupon;
+            // refactored out
+            ExecuteExperimentExecutionRecipe(labServer, ref client, ref startExecution, duration, userTZ, userID, groupID, groupName, out brokerDB, out coupon);
+
+            // construct the redirect query
+            StringBuilder url = new StringBuilder(client.loaderScript.Trim());
+            if (url.ToString().IndexOf("?") == -1)
+                url.Append('?');
+            else
+                url.Append('&');
+            url.Append("coupon_id=" + coupon.couponId + "&passkey=" + coupon.passkey
+                + "&issuer_guid=" + brokerDB.GetIssuerGuid());            
+
+            //return the appended url
+            return url.ToString();
+        }
+
+        /// <summary>
+        /// Modified ExecuteExperimentExecutionRecipe inorder to better support interactive applets. 
+        /// </summary>
+        /// <param name="labServer"></param>
+        /// <param name="client"></param>
+        /// <param name="startExecution"></param>
+        /// <param name="duration"></param>
+        /// <param name="userTZ"></param>
+        /// <param name="userID"></param>
+        /// <param name="groupID"></param>
+        /// <param name="groupName"></param>
+        /// <returns></returns> added silly bool should be changed
+        public IDictionary<string, string> ExecuteExperimentExecutionRecipe(ProcessAgentInfo labServer, LabClient client,
+            DateTime startExecution, long duration, int userTZ, int userID, int groupID, string groupName, bool silly)
+        {
+            BrokerDB brokerDB;
+            Coupon coupon;
+            // refactored out
+            ExecuteExperimentExecutionRecipe(labServer, ref client, ref startExecution, duration, userTZ, userID, groupID, groupName, out brokerDB, out coupon);
+
+            // 
+            IDictionary<string,string> ht = new Dictionary<string,string>();
+            ht["passkey"] = coupon.passkey;
+            ht["coupon_id"] = coupon.couponId.ToString();
+            ht["issuer_guid"] = brokerDB.GetIssuerGuid();
+            //return the appended url
+            return ht;
+        }
+
+        private static void ExecuteExperimentExecutionRecipe(ProcessAgentInfo labServer, ref LabClient client, ref DateTime startExecution, long duration, int userTZ, int userID, int groupID, string groupName, out BrokerDB brokerDB, out Coupon coupon)
+        {
             int essId = 0;
             ProcessAgentInfo essAgent = null;
 
@@ -87,7 +137,7 @@ namespace iLabs.ServiceBroker
             AuthorizationWrapperClass wrapper = new AuthorizationWrapperClass();
 
             // create ticket issuer and payload factory
-            BrokerDB brokerDB = new BrokerDB();
+            brokerDB = new BrokerDB();
             TicketLoadFactory factory = TicketLoadFactory.Instance();
 
             if (client.needsESS)
@@ -97,7 +147,7 @@ namespace iLabs.ServiceBroker
             }
 
             // 1. Create Coupon for ExperimentCollection
-            Coupon coupon = brokerDB.CreateCoupon();
+            coupon = brokerDB.CreateCoupon();
 
             //
             // 2. create ServiceBroker experiment record and get corresponding experiment id
@@ -108,74 +158,62 @@ namespace iLabs.ServiceBroker
 
             // Store a record of the Experiment Collection Coupon
             DataStorageAPI.InsertExperimentCoupon(experimentID, coupon.couponId);
-             string essWebAddress = null;
-
-             
-                 // If a ESS is specified Create the ESS Tickets, this should only happen if a resource is mapped
-                 if (essId > 0)
-                 {
-                     //3.A create ESS administer experiment ticket, Add 10 minutes to duration
-                     // This must be created before the ESS experiment records may be created
-                     essAgent = brokerDB.GetProcessAgentInfo(essId);
-                     if ((essAgent != null) && !essAgent.retired)
-                     {
-                         brokerDB.AddTicket(coupon,
-                                TicketTypes.ADMINISTER_EXPERIMENT, essAgent.AgentGuid, brokerDB.GetIssuerGuid(), ticketDuration, factory.createAdministerExperimentPayload(experimentID, essAgent.webServiceUrl));
-
-                         //3.B create store record ticket
-                         brokerDB.AddTicket(coupon,
-                                TicketTypes.STORE_RECORDS, essAgent.agentGuid, labServer.agentGuid, ticketDuration, factory.StoreRecordsPayload(true, experimentID, essAgent.webServiceUrl));
-
-                         //3.C create retrieve experiment ticket, retrieve Experiment Records never expires, unless experiment deleted
-                         //    This should be changed to a long but finite period once eadExisting Expermint is in place.
-                         brokerDB.AddTicket(coupon,
-                                TicketTypes.RETRIEVE_RECORDS, essAgent.agentGuid, brokerDB.GetIssuerGuid(), -1, factory.RetrieveRecordsPayload(experimentID, essAgent.webServiceUrl));
+            string essWebAddress = null;
 
 
-                         // 3.D Create the ESS Experiment Records
-                         ExperimentStorageProxy ess = new ExperimentStorageProxy();
-                         ess.AgentAuthHeaderValue = new AgentAuthHeader();
-                         ess.AgentAuthHeaderValue.coupon = essAgent.identOut;
-                         ess.AgentAuthHeaderValue.agentGuid = ProcessAgentDB.ServiceGuid;
-                         ess.Url = essAgent.webServiceUrl;
-                         essWebAddress = essAgent.webServiceUrl;
+            // If a ESS is specified Create the ESS Tickets, this should only happen if a resource is mapped
+            if (essId > 0)
+            {
+                //3.A create ESS administer experiment ticket, Add 10 minutes to duration
+                // This must be created before the ESS experiment records may be created
+                essAgent = brokerDB.GetProcessAgentInfo(essId);
+                if ((essAgent != null) && !essAgent.retired)
+                {
+                    brokerDB.AddTicket(coupon,
+                           TicketTypes.ADMINISTER_EXPERIMENT, essAgent.AgentGuid, brokerDB.GetIssuerGuid(), ticketDuration, factory.createAdministerExperimentPayload(experimentID, essAgent.webServiceUrl));
 
-                         // Call the ESS to create the ESS Records and open the experiment
-                         StorageStatus status = ess.OpenExperiment(experimentID, ticketDuration);
-                         if (status != null)
-                             DataStorageAPI.UpdateExperimentStatus(status);
-                     }
-                 }
-             
+                    //3.B create store record ticket
+                    brokerDB.AddTicket(coupon,
+                           TicketTypes.STORE_RECORDS, essAgent.agentGuid, labServer.agentGuid, ticketDuration, factory.StoreRecordsPayload(true, experimentID, essAgent.webServiceUrl));
+
+                    //3.C create retrieve experiment ticket, retrieve Experiment Records never expires, unless experiment deleted
+                    //    This should be changed to a long but finite period once eadExisting Expermint is in place.
+                    brokerDB.AddTicket(coupon,
+                           TicketTypes.RETRIEVE_RECORDS, essAgent.agentGuid, brokerDB.GetIssuerGuid(), -1, factory.RetrieveRecordsPayload(experimentID, essAgent.webServiceUrl));
+
+
+                    // 3.D Create the ESS Experiment Records
+                    ExperimentStorageProxy ess = new ExperimentStorageProxy();
+                    ess.AgentAuthHeaderValue = new AgentAuthHeader();
+                    ess.AgentAuthHeaderValue.coupon = essAgent.identOut;
+                    ess.AgentAuthHeaderValue.agentGuid = ProcessAgentDB.ServiceGuid;
+                    ess.Url = essAgent.webServiceUrl;
+                    essWebAddress = essAgent.webServiceUrl;
+
+                    // Call the ESS to create the ESS Records and open the experiment
+                    StorageStatus status = ess.OpenExperiment(experimentID, ticketDuration);
+                    if (status != null)
+                        DataStorageAPI.UpdateExperimentStatus(status);
+                }
+            }
+
             //
             // 4. create the execution ticket for the experiment
             //
- 
+
             // 4.A create payload 
             string payload = factory.createExecuteExperimentPayload(essWebAddress, startExecution, duration,
                 userTZ, groupName, brokerDB.GetIssuerGuid(), experimentID);
 
-            
+
             // 4.B create experiment execution ticket.
-            brokerDB.AddTicket(coupon, 
+            brokerDB.AddTicket(coupon,
                       TicketTypes.EXECUTE_EXPERIMENT, labServer.agentGuid, labServer.agentGuid, ticketDuration, payload);
 
             // 4.C Create sessionRedemption Ticket
-            string sessionPayload = factory.createRedeemSessionPayload(userID, groupID,client.clientID);
+            string sessionPayload = factory.createRedeemSessionPayload(userID, groupID, client.clientID);
             brokerDB.AddTicket(coupon,
                       TicketTypes.REDEEM_SESSION, brokerDB.GetIssuerGuid(), brokerDB.GetIssuerGuid(), ticketDuration, sessionPayload);
-
-            // construct the redirect query
-            StringBuilder url = new StringBuilder(client.loaderScript.Trim());
-            if (url.ToString().IndexOf("?") == -1)
-                url.Append('?');
-            else
-                url.Append('&');
-            url.Append("coupon_id=" + coupon.couponId + "&passkey=" + coupon.passkey
-                + "&issuer_guid=" + brokerDB.GetIssuerGuid());            
-
-            //return the appended url
-            return url.ToString();
         }
 
 
