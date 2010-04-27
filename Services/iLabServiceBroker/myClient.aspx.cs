@@ -427,13 +427,7 @@ namespace iLabs.ServiceBroker.iLabSB
                             }
                             else if (clients[0].clientType == LabClient.INTERACTIVE_APPLET)
                             {
-                                // Note: Currently not supporting Interactive applets
-                                // use the Loader script for Batch experiments
-                                //
-
-                                // this is quite annoying, why isn't there any support for this, I would imagine this would be
-                                // one of the most popular features.....
-
+      
                                 // we need some way to get the pass the couponId,passkey, issuerGuid and sbUrl to the applet
                                 // the only way to send arguments to the applet is to pass them as parameters in the 
                                 // "creating" html code.
@@ -546,25 +540,47 @@ namespace iLabs.ServiceBroker.iLabSB
             LabClient client = AdministrativeAPI.GetLabClient(Convert.ToInt32(Session["ClientID"]));
             if (client.clientID > 0)
             {
-                if (client.clientType == LabClient.INTERACTIVE_HTML_REDIRECT)
+                if (client.clientType == LabClient.INTERACTIVE_HTML_REDIRECT || client.clientType == LabClient.INTERACTIVE_APPLET)
                 {
                     long[] coupIDs = InternalDataDB.RetrieveExperimentCouponIDs(expid);
                     Coupon coupon = brokerDB.GetIssuedCoupon(coupIDs[0]);
-                    // construct the redirect query
-                    StringBuilder url = new StringBuilder(client.loaderScript.Trim());
-                    if (url.ToString().IndexOf("?") == -1)
-                        url.Append('?');
-                    else
-                        url.Append('&');
-                    url.Append("coupon_id=" + coupon.couponId + "&passkey=" + coupon.passkey
-                        + "&issuer_guid=" + brokerDB.GetIssuerGuid());
 
-                    // Add the return url to the redirect
-                    url.Append("&sb_url=");
-                    url.Append(Utilities.ExportUrlPath(Request.Url));
+                    if (client.clientType == LabClient.INTERACTIVE_HTML_REDIRECT)
+                    {
+                        // construct the redirect query
+                        StringBuilder url = new StringBuilder(client.loaderScript.Trim());
+                        if (url.ToString().IndexOf("?") == -1)
+                            url.Append('?');
+                        else
+                            url.Append('&');
+                        url.Append("coupon_id=" + coupon.couponId + "&passkey=" + coupon.passkey
+                            + "&issuer_guid=" + brokerDB.GetIssuerGuid());
 
-                    // Now open the lab within the current Window/frame
-                    Response.Redirect(url.ToString(), true);
+                        // Add the return url to the redirect
+                        url.Append("&sb_url=");
+                        url.Append(Utilities.ExportUrlPath(Request.Url));
+
+                        // Now open the lab within the current Window/frame
+                        Response.Redirect(url.ToString(), true);
+                    }
+                    else if (client.clientType == LabClient.INTERACTIVE_APPLET)
+                    {
+                        // we have the coupon what do we need now to lauch the lab....?
+                        // the whole loader script part should have run... so we should be
+                        // able to skip that part.
+                        
+                        // one question would be is the coupon the same... 
+                        // if they're not the same we need to change it. 
+                        // It seems that it is the same. 
+                        // then we just need to launch the client...
+
+
+                        string jScript = @"<script language='javascript'>parent.theapplet.location.href = '"
+     + "applet.aspx" + @"'</script>";
+                        Page.RegisterStartupScript("ReloadFrame", jScript);
+
+                    }
+
                 }
             }
         }
